@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <!-- 한글 표시, 모바일 화면 폭, 브라우저 탭 색상을 설정합니다. -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f4ef">
+  <title>구독 정리 | 매달 나가는 돈 한눈에</title>
+
+  <!-- 화면 스타일을 불러옵니다. 상대 경로는 index.html의 위치를 기준으로 합니다. -->
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- defer는 HTML을 먼저 읽은 뒤 실행하게 합니다. 계산 함수(logic.js)를 먼저 불러와야
+       뒤에 오는 ui.js와 main.js에서 그 함수들을 사용할 수 있습니다. -->
+  <script src="js/logic.js" defer></script>
+  <script src="js/ui.js" defer></script>
+  <script src="js/main.js" defer></script>
+</head>
+<body>
+  <!-- 상단 바: 앱 이름과 데이터 저장 위치 안내를 표시합니다. -->
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="구독 정리 홈">
+      <span class="brand-mark" aria-hidden="true">₩</span>
+      <span>구독 정리</span>
+    </a>
+    <span class="local-note"><span class="status-dot"></span> 이 기기에 저장됩니다</span>
+  </header>
+
+  <!-- 페이지의 실제 콘텐츠입니다. id="top"은 로고를 눌렀을 때 이동할 위치입니다. -->
+  <main id="top" class="page-shell">
+    <!-- 제목과 오늘 날짜는 main.js가 오늘 날짜를 계산해 채웁니다. -->
+    <section class="page-heading" aria-labelledby="page-title">
+      <div>
+        <p class="eyebrow">YOUR MONTHLY COMMITMENTS</p>
+        <h1 id="page-title">매달 나가는 돈,<br class="mobile-break"> 한눈에 정리해요.</h1>
+      </div>
+      <p class="today-label" id="today-label"></p>
+    </section>
+
+    <!-- 세 요약 값은 구독 데이터가 바뀔 때마다 main.js의 render()가 갱신합니다. -->
+    <section class="summary-grid" aria-label="구독 지출 요약">
+      <article class="summary-item summary-primary">
+        <span class="summary-label">월 구독료</span>
+        <strong id="monthly-total" class="summary-value">₩0</strong>
+        <span class="summary-foot">매달 기준으로 환산</span>
+      </article>
+      <article class="summary-item">
+        <span class="summary-label">연간 예상 지출</span>
+        <strong id="annual-total" class="summary-value">₩0</strong>
+        <span class="summary-foot">현재 구독 기준</span>
+      </article>
+      <article class="summary-item">
+        <span class="summary-label">이번 주 결제 예정</span>
+        <strong id="due-count" class="summary-value">0<span class="value-unit">건</span></strong>
+        <span id="due-caption" class="summary-foot">앞으로 7일 이내</span>
+      </article>
+    </section>
+
+    <!-- 데스크톱에서는 구독 목록과 보조 영역을 나란히, 모바일에서는 위아래로 배치합니다. -->
+    <div class="content-grid">
+      <!-- 구독 카드가 들어갈 빈 컨테이너입니다. JavaScript가 카드나 빈 상태 안내를 추가합니다. -->
+      <section class="subscriptions-section" aria-labelledby="subscriptions-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">SUBSCRIPTIONS</p>
+            <h2 id="subscriptions-title">내 구독 <span id="subscription-count" class="count-badge">0</span></h2>
+          </div>
+          <button class="button button-dark" id="add-subscription-button" type="button">
+            <span aria-hidden="true">+</span> 구독 추가
+          </button>
+        </div>
+        <div id="subscription-list" class="subscription-list" aria-live="polite"></div>
+      </section>
+
+      <!-- 오른쪽 보조 영역: 지출 비중과 구독 입력 폼입니다. -->
+      <aside class="side-column">
+        <!-- 카테고리별 합계와 비율 막대를 JavaScript가 그립니다. -->
+        <section class="category-section" aria-labelledby="category-title">
+          <p class="eyebrow">SPENDING MIX</p>
+          <h2 id="category-title">카테고리별 비중</h2>
+          <div id="category-breakdown" class="category-breakdown"></div>
+        </section>
+
+        <!-- 같은 폼을 새 항목 추가와 기존 항목 수정에 함께 사용합니다. -->
+        <section class="form-section" id="form-section" aria-labelledby="form-title">
+          <div class="form-heading">
+            <div>
+              <p class="eyebrow">KEEP IT CURRENT</p>
+              <h2 id="form-title">새 구독 추가</h2>
+            </div>
+            <span class="form-index" aria-hidden="true">01</span>
+          </div>
+          <form id="subscription-form">
+            <!-- 수정 중인 구독의 id를 보이지 않게 보관합니다. 비어 있으면 새 항목입니다. -->
+            <input id="subscription-id" name="id" type="hidden">
+            <label class="field-label" for="name">구독 이름</label>
+            <input class="text-input" id="name" name="name" type="text" maxlength="60" placeholder="예: 음악 스트리밍" required>
+
+            <div class="field-row">
+              <!-- 금액은 원 단위 정수이며, cycle은 월간/연간 구분을 저장합니다. -->
+              <div class="field-group">
+                <label class="field-label" for="amount">결제 금액</label>
+                <div class="amount-input-wrap">
+                  <input class="text-input amount-input" id="amount" name="amount" type="number" min="1" step="1" inputmode="numeric" placeholder="13,500" required>
+                  <span>원</span>
+                </div>
+              </div>
+              <div class="field-group">
+                <label class="field-label" for="cycle">결제 주기</label>
+                <select class="text-input" id="cycle" name="cycle">
+                  <option value="monthly">매월</option>
+                  <option value="yearly">매년</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- date 입력은 브라우저가 날짜 선택 UI를 제공하며 YYYY-MM-DD 문자열을 반환합니다. -->
+            <label class="field-label" for="nextPaymentDate">다음 결제일</label>
+            <input class="text-input" id="nextPaymentDate" name="nextPaymentDate" type="date" required>
+
+            <div class="field-row">
+              <div class="field-group">
+                <label class="field-label" for="category">카테고리</label>
+                <input class="text-input" id="category" name="category" type="text" maxlength="30" placeholder="영상, 음악 등" required>
+              </div>
+              <div class="field-group">
+                <label class="field-label" for="paymentMethod">결제 수단</label>
+                <input class="text-input" id="paymentMethod" name="paymentMethod" type="text" maxlength="40" placeholder="카드 또는 계좌" required>
+              </div>
+            </div>
+
+            <!-- 오류는 이 영역에 표시합니다. hidden이 true면 화면과 접근성 트리에서 숨겨집니다. -->
+            <p class="form-error" id="form-error" role="alert" hidden></p>
+            <div class="form-actions">
+              <!-- 수정 상태에서만 취소 버튼을 보여주고, 제출 버튼 문구도 상태에 맞춰 변경합니다. -->
+              <button class="button button-text" id="cancel-edit-button" type="button" hidden>취소</button>
+              <button class="button button-accent" id="submit-button" type="submit">구독 저장 <span aria-hidden="true">↗</span></button>
+            </div>
+          </form>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <!-- 페이지 하단의 간단한 브랜드 표기입니다. -->
+  <footer class="footer"><span>구독 정리</span><span>작은 지출도, 잘 보이게.</span></footer>
+</body>
+</html>
